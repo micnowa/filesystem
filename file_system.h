@@ -10,6 +10,9 @@
 #include <stdbool.h>
 #include "utils.h"
 
+/** Disc size **/
+#define FS_DISC_SIZE sizeof(int)
+
 /** Counter **/
 #define FS_COUNTER_SIZE sizeof(int)
 
@@ -29,8 +32,8 @@
 #define FS_NODE_SIZE sizeof(struct node)
 
 /** Special pointers **/
-#define FS_FIRST_DESCRIPTOR FS_COUNTER_SIZE+FS_BLOCK_NUMBER_SIZE+FS_BLOCK_SIZE_SIZE
-#define FS_FIRST_NODE  FS_COUNTER_SIZE+FS_BLOCK_NUMBER_SIZE+FS_BLOCK_SIZE_SIZE+FS_DESCRIPTOR_SIZE*FS_DESCRIPTOR_NUM
+#define FS_FIRST_DESCRIPTOR FS_DISC_SIZE+FS_COUNTER_SIZE+FS_BLOCK_NUMBER_SIZE+FS_BLOCK_SIZE_SIZE
+#define FS_FIRST_NODE  FS_DISC_SIZE+FS_COUNTER_SIZE+FS_BLOCK_NUMBER_SIZE+FS_BLOCK_SIZE_SIZE+FS_DESCRIPTOR_SIZE*FS_DESCRIPTOR_NUM
 
 /** Disc name **/
 #define DISC_NAME "disc"
@@ -47,15 +50,21 @@ typedef struct descriptor {
 } descriptor;
 
 typedef struct node {
-    unsigned int next;
+    int next;
     bool is_final;
 } node;
 
 void create_disc(int disc_size, int block_size);
 
+int load_block_number();
+
 descriptor **load_descriptors();
 
+node **load_nodes();
+
 void create_file(const char *fname, int bytes);
+
+void remove_all_files();
 
 void remove_file(const char *name);
 

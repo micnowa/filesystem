@@ -36,21 +36,6 @@ char *extract_name(const char *name) {
     return new_name;
 }
 
-char *extract_value(const char *arg, const char *phrase) {
-    char *num_str = strstr(arg, phrase);
-    char *bytes_str = (char *) malloc(20 * sizeof(char));
-    if (num_str != NULL) {
-        int j = strlen(phrase);
-        int k = 0;
-        while (num_str[j] >= '0' && num_str[j] <= '9') {
-            bytes_str[k] = num_str[j];
-            k++;
-            j++;
-        }
-        puts(bytes_str);
-    }
-    return bytes_str;
-}
 
 char *current_date() {
     char text[100];

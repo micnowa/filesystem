@@ -17,8 +17,6 @@ bool valid_fname(const char *name);
 
 char* extract_name(const char *name);
 
-char* extract_value(const char *arg, const char *phrase);
-
 bool str_with_quotes(const char *str);
 
 char* current_date();

@@ -47,6 +47,7 @@ void mkfs_call(const char *size_arg, const char *block_arg) {
     }
     create_disc(bytes, block);
     load_descriptors();
+    load_nodes();
 }
 
 
@@ -92,7 +93,10 @@ void cp_call(const char *src, const char *dest) {
 }
 
 void rm_call(char *file) {
-
+    if(strcmp(file, "*") == 0) {
+        puts("removing all files");
+        remove_all_files();
+    }
 }
 
 void ls_call(char *option) {
@@ -113,10 +117,10 @@ int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) puts(argv[i]);
 
     int command = cmd(argv[1]);
+    int opt;
     switch (command) {
         case mkfs:
             puts("Making disc ...");
-            int opt;
             char *bytes = (char *) malloc(sizeof(char) * 20);
             char *blocks = (char *) malloc(sizeof(char) * 20);
             while ((opt = getopt(argc, argv, ":s:b:")) != -1) {
@@ -139,6 +143,7 @@ int main(int argc, char **argv) {
             break;
         case touch:
             puts("Creating file ...");
+            puts("Making disc ...");
             touch_call(argv[2]);
             break;
         case mv:
