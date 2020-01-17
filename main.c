@@ -15,7 +15,8 @@ enum string_code {
     cp,
     rm,
     ls,
-    rmdisc
+    rmdisc,
+    info
 };
 
 int cmd(char *inString) {
@@ -26,6 +27,7 @@ int cmd(char *inString) {
     if (!strcmp(inString, "rm")) return rm;
     if (!strcmp(inString, "ls")) return ls;
     if (!strcmp(inString, "rmdisc")) return rmdisc;
+    if (!strcmp(inString, "info")) return info;
     return INT_MIN;
 }
 
@@ -51,7 +53,7 @@ void mkfs_call(const char *size_arg, const char *block_arg) {
 }
 
 
-void touch_call(char *string) {
+void touch_call(char *string, char* str2) {
     if (string == NULL || !strcmp(string, "")) {
         puts("Please provide name next time");
         return;
@@ -64,6 +66,8 @@ void touch_call(char *string) {
 
     string = extract_name(string);
     puts(string);
+    int bytes = (int) strtol(str2, NULL, 10);
+    create_file(string, bytes);
 }
 
 /**
@@ -121,6 +125,7 @@ int main(int argc, char **argv) {
     switch (command) {
         case mkfs:
             puts("Making disc ...");
+
             char *bytes = (char *) malloc(sizeof(char) * 20);
             char *blocks = (char *) malloc(sizeof(char) * 20);
             while ((opt = getopt(argc, argv, ":s:b:")) != -1) {
@@ -140,11 +145,12 @@ int main(int argc, char **argv) {
                 }
             }
             mkfs_call(bytes, blocks);
+            read_disc_info();
             break;
         case touch:
             puts("Creating file ...");
             puts("Making disc ...");
-            touch_call(argv[2]);
+            touch_call(argv[2], argv[3]);
             break;
         case mv:
             puts("Moving file ...");
@@ -165,6 +171,10 @@ int main(int argc, char **argv) {
         case rmdisc:
             puts("Making disc ...");
             rmdisc_call(argv[2]);
+            break;
+        case info:
+            puts("Info:");
+            read_disc_info();
             break;
         default:
             puts("Command not recognized ...");

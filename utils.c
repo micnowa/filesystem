@@ -5,6 +5,16 @@
     Created by Michał Nowaliński on 7/1/20.
 **/
 
+FILE *open_disc(const char *mode) {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, mode);
+    if (file == NULL) {
+        puts("Unable to reach the disc ...");
+        return NULL;
+    } else return file;
+}
+
+
 bool is_positive_int(char *size) {
     if (!(size[0] >= '1' && size[0] <= '9')) return false;
     for (int i = 0; i < strlen(size); i++) {
@@ -59,3 +69,98 @@ int calculate_block_number(int disc_size, int block_size) {
     remaining_size = (int) (remaining_size / (block_size + FS_NODE_SIZE));
     return remaining_size;
 }
+
+int node_offset(int number) {
+    return FS_FIRST_NODE + number * FS_NODE_SIZE;
+}
+
+int block_offset(int number) {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, "r");
+    if (file == NULL) {
+        puts("Couldn't open the disc ...");
+        return -1;
+    }
+
+    int block_number, block_size;
+    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE, SEEK_SET);
+    fread(&block_number, FS_BLOCK_NUMBER_SIZE, 1, file);
+    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE + FS_BLOCK_NUMBER_SIZE, SEEK_SET);
+    fread(&block_size, FS_BLOCK_SIZE_SIZE, 1, file);
+    fclose(file);
+
+    int offset = FS_FIRST_NODE + FS_NODE_SIZE * block_number;
+    offset += block_size * number;
+    return offset;
+}
+
+int load_disc_size() {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, "r");
+    if (file == NULL) {
+        puts("Unable to reach the disc ...");
+        return 0;
+    }
+
+    int disc_size;
+    fread(&disc_size, FS_DISC_SIZE_SIZE, 1, file);
+    fclose(file);
+    return disc_size;
+}
+
+int load_file_counter() {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, "r");
+    if (file == NULL) {
+        puts("Unable to reach the disc ...");
+        return 0;
+    }
+
+    int file_counter;
+    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
+    fread(&file_counter, FS_COUNTER_SIZE, 1, file);
+    fclose(file);
+    return file_counter;
+}
+
+int load_block_number() {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, "r");
+    if (file == NULL) {
+        puts("Unable to reach the disc ...");
+        return 0;
+    }
+
+    int block_number;
+    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE, SEEK_SET);
+    fread(&block_number, FS_BLOCK_NUMBER_SIZE, 1, file);
+    fclose(file);
+    return block_number;
+}
+
+int load_block_size() {
+    FILE *file = NULL;
+    file = fopen(DISC_NAME, "r");
+    if (file == NULL) {
+        puts("Unable to reach the disc ...");
+        return 0;
+    }
+
+    int block_size;
+    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE + FS_BLOCK_NUMBER_SIZE, SEEK_SET);
+    fread(&block_size, FS_BLOCK_SIZE_SIZE, 1, file);
+    fclose(file);
+    return block_size;
+}
+
+bool enough_nodes(int bytes) {
+    node **nd = load_nodes();
+    int node_number = load_block_number();
+    int block_size = load_block_size();
+    int counter = 0;
+    for (int i = 0; i < node_number; i++) {
+        if (!nd[i]->has_data) counter++;
+    }
+    return block_size * node_number >= bytes;
+}
+
