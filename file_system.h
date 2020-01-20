@@ -76,4 +76,6 @@ void move_file(const char *source, const char *dest);
 
 descriptor *find(const char *file);
 
+descriptor *find_and_return_number(const char *file, int *num);
+
 #endif //FILE_SYSTEM_H

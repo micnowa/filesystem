@@ -94,7 +94,6 @@ descriptor **load_descriptors_() {
         fseek(file, offset, SEEK_SET);
         fread(desc[i], FS_DESCRIPTOR_SIZE, 1, file);
         offset += FS_DESCRIPTOR_SIZE;
-        printf("%s %s %d %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
     }
     fclose(file);
 
@@ -111,9 +110,8 @@ node **load_nodes_() {
     node **nds = malloc(sizeof(node *) * block_number);
     for (int i = 0; i < block_number; i++) {
         nds[i] = malloc(sizeof(node));
-        fseek(file, offset , SEEK_SET);
+        fseek(file, offset, SEEK_SET);
         fread(nds[i], FS_NODE_SIZE, 1, file);
-        if(i < 10) printf("%d %s\n", nds[i]->next, nds[i]->has_data ? "true" : "false");
         offset += FS_NODE_SIZE;
     }
     fclose(file);
@@ -132,7 +130,7 @@ void create_file(const char *fname, int bytes) {
         puts("Not enough space ...");
         return;
     }
-    if (find(fname) != NULL) remove_file(fname);
+//    if (find(fname) != NULL) remove_file(fname);
 
     int descriptor_position = -1;
     descriptor **desc = load_descriptors_();
@@ -171,24 +169,16 @@ void create_file(const char *fname, int bytes) {
     desc[descriptor_position]->first = current;
 
     /** Incrementing file number **/
-    FILE *file = open_disc("r+");
-    int size;
-    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
-    fread(&size, FS_COUNTER_SIZE, 1, file);
-    size++;
-    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
-    fwrite(&size, FS_COUNTER_SIZE, 1, file);
-    fclose(file);
+    increment_counter(true);
 
     /** Writing descriptor **/
-    write_descriptor_(*desc[descriptor_position], desc_offset); // It's OK
+    write_descriptor_(*desc[descriptor_position], desc_offset);
 
 
     int nd_off, bl_off;
-
     void *block;
     int next_element = current;
-    file = open_disc("r+");
+    FILE *file = open_disc("r+");
     while (blocks_to_write != 0) {
         /** Writing node **/
         current = next_element;
@@ -203,7 +193,6 @@ void create_file(const char *fname, int bytes) {
         nd[current]->next = next_element;
 
         nd_off = node_offset(current);
-        node *nodeW = nd[current];
         fseek(file, nd_off, SEEK_SET);
         fwrite(nd[current], FS_NODE_SIZE, 1, file);
 
@@ -224,10 +213,6 @@ void create_file(const char *fname, int bytes) {
         blocks_to_write--;
     }
     fclose(file);
-
-    for(int i=0; i < 10;i++) {
-        printf("*** %d %s***\n", nd[i]->next, nd[i]->has_data ? "true" : "false");
-    }
 }
 
 void write_descriptors(descriptor **desc) {
@@ -253,7 +238,6 @@ void write_nodes(node **nd, int num) {
     fclose(file);
 }
 
-
 void remove_all_files() {
     FILE *file = NULL;
     file = fopen(DISC_NAME, "r");
@@ -273,11 +257,43 @@ void remove_all_files() {
 }
 
 void remove_file(const char *name) {
-    /*descriptor **desc = load_descriptors();
-    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
-        if (strcmp(desc[i]->name, name) == 0) puts("wow");
-    }*/
-    //fclose(file);
+    int num;
+    descriptor *desc = find_and_return_number(name, &num);
+    if (desc == NULL) return;
+    int bytes = desc->size;
+
+    /** Decrementing files counter **/
+    increment_counter(false);
+
+    int block_size = load_block_size();
+    int total_block_number = load_block_number();
+    int blocks_number = !(bytes % block_size) ? bytes / block_size : bytes / block_size + 1;
+    int current_node = desc->first, next;
+    int offset;
+    descriptor empty_desc = (descriptor) {.date = "", .name = "", .first = -1, .size=0};
+    node empty_node = (node) {.next = -1, .has_data  = false};
+    void *empty_block = malloc(block_size);
+    FILE *file = open_disc("r+");
+
+    /** Writing empty descriptor **/
+    offset = FS_FIRST_DESCRIPTOR + FS_DESCRIPTOR_SIZE * num;
+    fseek(file, offset, SEEK_SET);
+    fwrite(&empty_desc, FS_DESCRIPTOR_SIZE, 1, file);
+
+    /** Writing empty nodes and blocks **/
+    for (int i = 0; i < blocks_number; i++) {
+        offset = node_offset(current_node);
+        fseek(file, offset, SEEK_SET);
+        fread(&next, sizeof(int), 1, file);
+        fseek(file, offset, SEEK_SET);
+        fwrite(&empty_node, FS_NODE_SIZE, 1, file);
+        offset = block_offset(current_node, total_block_number, block_size);
+        fseek(file, offset, SEEK_SET);
+        fwrite(&empty_block, block_size, 1, file);
+        current_node = next;
+    }
+    fclose(file);
+
 }
 
 void move_file(const char *source, const char *dest) {}
@@ -286,6 +302,17 @@ descriptor *find(const char *file) {
     descriptor **desc = load_descriptors_();
     for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
         if (strcmp(desc[i]->name, file) == 0) {
+            return desc[i];
+        }
+    }
+    return NULL;
+}
+
+descriptor *find_and_return_number(const char *file, int *num) {
+    descriptor **desc = load_descriptors_();
+    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
+        if (strcmp(desc[i]->name, file) == 0) {
+            *num = i;
             return desc[i];
         }
     }

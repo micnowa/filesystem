@@ -39,4 +39,6 @@ int load_block_size();
 
 bool enough_nodes(int bytes);
 
+void increment_counter(bool plus);
+
 #endif //UTILS_H

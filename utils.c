@@ -147,3 +147,14 @@ bool enough_nodes(int bytes) {
     return block_size * node_number >= bytes;
 }
 
+void increment_counter(bool plus) {
+    FILE *file = open_disc("r+");
+    int size;
+    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
+    fread(&size, FS_COUNTER_SIZE, 1, file);
+    size = plus ? size + 1 : size - 1;
+    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
+    fwrite(&size, FS_COUNTER_SIZE, 1, file);
+    fclose(file);
+}
+

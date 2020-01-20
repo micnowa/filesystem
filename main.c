@@ -47,9 +47,8 @@ void mkfs_call(const char *size_arg, const char *block_arg) {
         puts("Size of block cannot be greater than size of disc");
         return;
     }
+    remove(DISC_NAME);
     create_disc(bytes, block);
-    load_descriptors_();
-    load_nodes_();
 }
 
 
@@ -64,19 +63,9 @@ void touch_call(char *string, char* str2) {
     }
     printf("Creating file: %s\n", string);
 
-    string = extract_name(string);
-    puts(string);
     int bytes = (int) strtol(str2, NULL, 10);
-    puts("*****");
+    create_file(extract_name(string), bytes);
     read_disc_info();
-    puts("*****");
-    create_file(string, bytes);
-    create_file(string, bytes);
-    create_file(string, bytes);
-    create_file(string, bytes);
-    puts("*****");
-    read_disc_info();
-    puts("*****");
 }
 
 /**
@@ -109,6 +98,10 @@ void rm_call(char *file) {
     if(strcmp(file, "*") == 0) {
         puts("removing all files");
         remove_all_files();
+    }
+    else {
+        descriptor *desc = find(file);
+        if(desc != NULL) remove_file(file);
     }
 }
 
@@ -158,9 +151,6 @@ int main(int argc, char **argv) {
             break;
         case touch:
             puts("Creating file ...");
-            puts("Making disc ...");
-            remove("disc");
-            mkfs_call("1000000", "4096");
             touch_call(argv[2], argv[3]);
             break;
         case mv:
