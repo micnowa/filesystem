@@ -56,9 +56,15 @@ void create_disc(int disc_size, int block_size);
 
 int *load_nodes_numbers(int *block_number, descriptor desc, int block_size);
 
-descriptor **load_descriptors();
+descriptor **load_descriptors_();
 
-node **load_nodes();
+void write_descriptors(descriptor **desc);
+
+void write_nodes(node **nd, int num);
+
+node **load_nodes_();
+
+void write_descriptor_(descriptor desc, int offset);
 
 void create_file(const char *fname, int bytes);
 

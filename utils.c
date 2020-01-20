@@ -53,7 +53,6 @@ char *current_date() {
     struct tm *t = localtime(&now);
 
     strftime(text, sizeof(text) - 1, "%d %m %Y %H:%M", t);
-    printf("Current Date: %s\n", text);
     char *str = malloc(sizeof(char) * (strlen(text) + 1));
     strcpy(str, text);
     return str;
@@ -74,21 +73,7 @@ int node_offset(int number) {
     return FS_FIRST_NODE + number * FS_NODE_SIZE;
 }
 
-int block_offset(int number) {
-    FILE *file = NULL;
-    file = fopen(DISC_NAME, "r");
-    if (file == NULL) {
-        puts("Couldn't open the disc ...");
-        return -1;
-    }
-
-    int block_number, block_size;
-    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE, SEEK_SET);
-    fread(&block_number, FS_BLOCK_NUMBER_SIZE, 1, file);
-    fseek(file, FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE + FS_BLOCK_NUMBER_SIZE, SEEK_SET);
-    fread(&block_size, FS_BLOCK_SIZE_SIZE, 1, file);
-    fclose(file);
-
+int block_offset(int number, int block_number, int block_size) {
     int offset = FS_FIRST_NODE + FS_NODE_SIZE * block_number;
     offset += block_size * number;
     return offset;
@@ -96,7 +81,7 @@ int block_offset(int number) {
 
 int load_disc_size() {
     FILE *file = NULL;
-    file = fopen(DISC_NAME, "r");
+    file = fopen(DISC_NAME, "rb");
     if (file == NULL) {
         puts("Unable to reach the disc ...");
         return 0;
@@ -110,7 +95,7 @@ int load_disc_size() {
 
 int load_file_counter() {
     FILE *file = NULL;
-    file = fopen(DISC_NAME, "r");
+    file = fopen(DISC_NAME, "rb");
     if (file == NULL) {
         puts("Unable to reach the disc ...");
         return 0;
@@ -124,8 +109,7 @@ int load_file_counter() {
 }
 
 int load_block_number() {
-    FILE *file = NULL;
-    file = fopen(DISC_NAME, "r");
+    FILE *file = fopen(DISC_NAME, "r");
     if (file == NULL) {
         puts("Unable to reach the disc ...");
         return 0;
@@ -139,8 +123,7 @@ int load_block_number() {
 }
 
 int load_block_size() {
-    FILE *file = NULL;
-    file = fopen(DISC_NAME, "r");
+    FILE *file = fopen(DISC_NAME, "r");
     if (file == NULL) {
         puts("Unable to reach the disc ...");
         return 0;
@@ -154,7 +137,7 @@ int load_block_size() {
 }
 
 bool enough_nodes(int bytes) {
-    node **nd = load_nodes();
+    node **nd = load_nodes_();
     int node_number = load_block_number();
     int block_size = load_block_size();
     int counter = 0;

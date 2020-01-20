@@ -3,8 +3,9 @@
 **/
 #include "file_system.h"
 
+
 void read_disc_info() {
-    FILE *file = open_disc("r");
+    FILE *file = open_disc("r+");
     int size, block, block_number, counter;
 
     fseek(file, 0, SEEK_SET);
@@ -23,6 +24,8 @@ void read_disc_info() {
     printf("COUNTER: %d\n", counter);
     printf("BLOCK NUMBER: %d\n", block_number);
     printf("BLOCK SIZE: %d\n", block);
+
+    fclose(file);
 }
 
 void create_disc(int disc_size, int block_size) {
@@ -82,37 +85,46 @@ void create_disc(int disc_size, int block_size) {
     fclose(file);
 }
 
-descriptor **load_descriptors() {
-    FILE *file = open_disc("r");
+descriptor **load_descriptors_() {
+    FILE *file = open_disc("r+");
     int offset = FS_FIRST_DESCRIPTOR;
     descriptor **desc = malloc(sizeof(descriptor *) * FS_DESCRIPTOR_NUM);
     for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
         desc[i] = malloc(sizeof(descriptor));
-        fseek(file, offset + FS_DESCRIPTOR_SIZE * i, SEEK_SET);
+        fseek(file, offset, SEEK_SET);
         fread(desc[i], FS_DESCRIPTOR_SIZE, 1, file);
-        //printf("%s %s %d %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
+        offset += FS_DESCRIPTOR_SIZE;
+        printf("%s %s %d %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
     }
     fclose(file);
 
     return desc;
 }
 
-node **load_nodes() {
-    FILE *file = open_disc("r");
+node **load_nodes_() {
+    FILE *file = open_disc("r+");
     int offset = FS_DISC_SIZE_SIZE + FS_COUNTER_SIZE;
     int block_number;
     fseek(file, offset, SEEK_SET);
     fread(&block_number, FS_BLOCK_NUMBER_SIZE, 1, file);
-    offset = FS_FIRST_DESCRIPTOR + FS_DESCRIPTOR_NUM * FS_DESCRIPTOR_SIZE;
+    offset = FS_FIRST_NODE;
     node **nds = malloc(sizeof(node *) * block_number);
     for (int i = 0; i < block_number; i++) {
         nds[i] = malloc(sizeof(node));
-        fseek(file, offset + FS_NODE_SIZE * i, SEEK_SET);
+        fseek(file, offset , SEEK_SET);
         fread(nds[i], FS_NODE_SIZE, 1, file);
-        //printf("%u %s\n", nds[i]->next, nds[i]->has_data ? "true" : "false");
+        if(i < 10) printf("%d %s\n", nds[i]->next, nds[i]->has_data ? "true" : "false");
+        offset += FS_NODE_SIZE;
     }
     fclose(file);
     return nds;
+}
+
+void write_descriptor_(descriptor desc, int offset) {
+    FILE *file = open_disc("r+");
+    fseek(file, offset, SEEK_SET);
+    fwrite(&desc, FS_DESCRIPTOR_SIZE, 1, file);
+    fclose(file);
 }
 
 void create_file(const char *fname, int bytes) {
@@ -120,54 +132,127 @@ void create_file(const char *fname, int bytes) {
         puts("Not enough space ...");
         return;
     }
-    remove_file(fname);
+    if (find(fname) != NULL) remove_file(fname);
 
     int descriptor_position = -1;
-    descriptor **desc = load_descriptors();
-    node **nd = load_nodes();
+    descriptor **desc = load_descriptors_();
+    node **nd = load_nodes_();
     int block_size = load_block_size();
-    int blocks_to_write = !(bytes % block_size) ? bytes / block_size : bytes / block_size + 1;
+    int block_number = load_block_number();
+    int blocks_to_write, last_block_size;
+    if (!(bytes % block_size)) {
+        blocks_to_write = bytes / block_size;
+        last_block_size = block_size;
+    } else {
+        blocks_to_write = bytes / block_size + 1;
+        last_block_size = bytes - (blocks_to_write - 1) * block_size;
+    }
 
     /** Looking for descriptor **/
-    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) if (desc[i]->first == -1) {
-        descriptor_position = i;
-        break;
-    }
+    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++)
+        if (desc[i]->first == -1) {
+            descriptor_position = i;
+            break;
+        }
     if (descriptor_position == -1) {
         puts("Exceeded files limit ...");
         return;
     }
 
-    int current = 0, next, node_number = load_block_number();
-    FILE *file = open_disc("wb");
-    int offset = FS_FIRST_DESCRIPTOR;
-    offset += FS_DESCRIPTOR_SIZE * descriptor_position;
-    while (!nd[current]->has_data) current++;
-    char name_tab[FS_NAME_SIZE], date_tab[FS_DATE_SIZE];
-    strcpy(name_tab, fname);
-    strcpy(date_tab, current_date());
-    descriptor descriptor1 = (descriptor) {.first = current, .name = name_tab, .size = bytes, .date = date_tab};
+    int current = 0;
+    int desc_offset = FS_FIRST_DESCRIPTOR;
+    desc_offset += FS_DESCRIPTOR_SIZE * descriptor_position;
+    while (nd[current]->has_data) {
+        current++;
+    }
+    strcpy(desc[descriptor_position]->date, current_date());
+    strcpy(desc[descriptor_position]->name, fname);
+    desc[descriptor_position]->size = bytes;
+    desc[descriptor_position]->first = current;
+
+    /** Incrementing file number **/
+    FILE *file = open_disc("r+");
+    int size;
+    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
+    fread(&size, FS_COUNTER_SIZE, 1, file);
+    size++;
+    fseek(file, FS_DISC_SIZE_SIZE, SEEK_SET);
+    fwrite(&size, FS_COUNTER_SIZE, 1, file);
+    fclose(file);
 
     /** Writing descriptor **/
-    fseek(file, offset, SEEK_SET);
-    fwrite(&descriptor1, FS_DESCRIPTOR_SIZE, 1, file);
+    write_descriptor_(*desc[descriptor_position], desc_offset); // It's OK
 
-    /** Writing node**/
-    offset = node_offset(current);
-    fclose(file);
-    int block_offs =  block_offset(current);
-    file = open_disc("wb");
 
-    node node_to_write;
+    int nd_off, bl_off;
+
+    void *block;
+    int next_element = current;
+    file = open_disc("r+");
     while (blocks_to_write != 0) {
-        fseek(file, offset, SEEK_SET);
-        node_to_write.has_data = true;
-        while (nd[current]->has_data) current++;
-        node_to_write.next = current;
-        fwrite(&node_to_write, FS_NODE_SIZE, 1, file);
+        /** Writing node **/
+        current = next_element;
+        nd[current]->has_data = true;
+        if (blocks_to_write == 1) {
+            next_element = -1;
+        } else {
+            while (nd[next_element]->has_data) {
+                next_element++;
+            }
+        }
+        nd[current]->next = next_element;
+
+        nd_off = node_offset(current);
+        node *nodeW = nd[current];
+        fseek(file, nd_off, SEEK_SET);
+        fwrite(nd[current], FS_NODE_SIZE, 1, file);
+
+        /** Writing block **/
+
+        bl_off = block_offset(current, block_number, block_size);
+        fseek(file, bl_off, SEEK_SET);
+        if (blocks_to_write == 1) {
+            block = calloc(1, last_block_size);
+            fseek(file, bl_off, SEEK_SET);
+            fwrite(block, last_block_size, 1, file);
+        } else {
+            block = calloc(1, block_size);
+            fseek(file, bl_off, SEEK_SET);
+            fwrite(block, block_size, 1, file);
+        }
+        free(block);
         blocks_to_write--;
     }
+    fclose(file);
+
+    for(int i=0; i < 10;i++) {
+        printf("*** %d %s***\n", nd[i]->next, nd[i]->has_data ? "true" : "false");
+    }
 }
+
+void write_descriptors(descriptor **desc) {
+    FILE *file = open_disc("r+");
+    int offset = FS_FIRST_DESCRIPTOR;
+    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
+        fseek(file, offset, SEEK_SET);
+        fwrite(desc[i], FS_NODE_SIZE, 1, file);
+        offset += FS_DESCRIPTOR_SIZE;
+    }
+    fclose(file);
+}
+
+void write_nodes(node **nd, int num) {
+    FILE *file = open_disc("r+");
+    int offset = FS_FIRST_NODE;
+    for (int i = 0; i < num; i++) {
+        fseek(file, offset, SEEK_SET);
+        node *nds = nd[i];
+        fwrite(nds, FS_NODE_SIZE, 1, file);
+        offset += FS_NODE_SIZE;
+    }
+    fclose(file);
+}
+
 
 void remove_all_files() {
     FILE *file = NULL;
@@ -198,7 +283,7 @@ void remove_file(const char *name) {
 void move_file(const char *source, const char *dest) {}
 
 descriptor *find(const char *file) {
-    descriptor **desc = load_descriptors();
+    descriptor **desc = load_descriptors_();
     for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
         if (strcmp(desc[i]->name, file) == 0) {
             return desc[i];

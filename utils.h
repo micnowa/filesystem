@@ -27,7 +27,7 @@ int calculate_block_number(int disc_size, int block_size);
 
 int node_offset(int number);
 
-int block_offset(int number);
+int block_offset(int number, int block_number, int block_size);
 
 int load_disc_size();
 

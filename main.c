@@ -48,8 +48,8 @@ void mkfs_call(const char *size_arg, const char *block_arg) {
         return;
     }
     create_disc(bytes, block);
-    load_descriptors();
-    load_nodes();
+    load_descriptors_();
+    load_nodes_();
 }
 
 
@@ -67,7 +67,16 @@ void touch_call(char *string, char* str2) {
     string = extract_name(string);
     puts(string);
     int bytes = (int) strtol(str2, NULL, 10);
+    puts("*****");
+    read_disc_info();
+    puts("*****");
     create_file(string, bytes);
+    create_file(string, bytes);
+    create_file(string, bytes);
+    create_file(string, bytes);
+    puts("*****");
+    read_disc_info();
+    puts("*****");
 }
 
 /**
@@ -104,7 +113,7 @@ void rm_call(char *file) {
 }
 
 void ls_call(char *option) {
-    descriptor **desc = load_descriptors();
+    descriptor **desc = load_descriptors_();
     for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
         if (desc[i]->size != 0)
             printf("%s %s %d %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
@@ -150,6 +159,8 @@ int main(int argc, char **argv) {
         case touch:
             puts("Creating file ...");
             puts("Making disc ...");
+            remove("disc");
+            mkfs_call("1000000", "4096");
             touch_call(argv[2], argv[3]);
             break;
         case mv:
@@ -181,6 +192,5 @@ int main(int argc, char **argv) {
             break;
     }
 
-    puts("Welcome");
     return 0;
 }
