@@ -7,6 +7,7 @@
 #include <time.h>
 #include "utils.h"
 #include "file_system.h"
+#include "help.h"
 
 enum string_code {
     mkfs,
@@ -31,6 +32,47 @@ int cmd(char *inString) {
     return INT_MIN;
 }
 
+bool print_help(const char *option, const char *help) {
+    bool used = false;
+    if (strcmp(help, "--help") != 0) {
+        return false;
+    } else {
+        if (!strcmp(option, "mkfs")) {
+            mkfs_help();
+            used = true;
+        }
+        if (!strcmp(option, "touch")) {
+            touch_help();
+            used = true;
+        }
+        if (!strcmp(option, "mv")) {
+            mv_help();
+            used = true;
+        }
+        if (!strcmp(option, "cp")) {
+            cp_help();
+            used = true;
+        }
+        if (!strcmp(option, "rm")) {
+            rm_help();
+            used = true;
+        }
+        if (!strcmp(option, "ls")) {
+            ls_help();
+            used = true;
+        }
+        if (!strcmp(option, "rmdisc")) {
+            rmdisc_help();
+            used = true;
+        }
+        if (!strcmp(option, "info")) {
+            info_help();
+            used = true;
+        }
+    }
+    return used;
+}
+
 
 void mkfs_call(const char *size_arg, const char *block_arg) {
     if (NULL == size_arg || NULL == block_arg) {
@@ -51,8 +93,7 @@ void mkfs_call(const char *size_arg, const char *block_arg) {
     create_disc(bytes, block);
 }
 
-
-void touch_call(char *string, char* str2) {
+void touch_call(char *string, char *str2) {
     if (string == NULL || !strcmp(string, "")) {
         puts("Please provide name next time");
         return;
@@ -65,7 +106,6 @@ void touch_call(char *string, char* str2) {
 
     int bytes = (int) strtol(str2, NULL, 10);
     create_file(extract_name(string), bytes);
-    read_disc_info();
 }
 
 /**
@@ -95,13 +135,12 @@ void cp_call(const char *src, const char *dest) {
 }
 
 void rm_call(char *file) {
-    if(strcmp(file, "*") == 0) {
+    if (strcmp(file, "*") == 0) {
         puts("removing all files");
         remove_all_files();
-    }
-    else {
+    } else {
         descriptor *desc = find(file);
-        if(desc != NULL) remove_file(file);
+        if (desc != NULL) remove_file(file);
     }
 }
 
@@ -122,6 +161,7 @@ int main(int argc, char **argv) {
     if (argc == 0) return 0;
     for (int i = 0; i < argc; i++) puts(argv[i]);
 
+    if (print_help(argv[1], argv[2])) return 0;
     int command = cmd(argv[1]);
     int opt;
     switch (command) {
@@ -155,14 +195,50 @@ int main(int argc, char **argv) {
             break;
         case mv:
             puts("Moving file ...");
-            mv_call(argv[2], argv[3]);
+            char *source = (char *) malloc(sizeof(char) * 32);
+            char *destination = (char *) malloc(sizeof(char) * 32);
+            while ((opt = getopt(argc, argv, ":s:d:")) != -1) {
+                switch (opt) {
+                    case 's':
+                        strcpy(source, optarg);
+                        break;
+                    case 'd':
+                        strcpy(destination, optarg);
+                        break;
+                    case ':':
+                        printf("option needs a value\n");
+                        break;
+                    case '?':
+                        printf("unknown option: %c\n", optopt);
+                        break;
+                }
+            }
+            mv_call(source, destination);
             break;
         case cp:
-            puts("Copying file ...");
-            cp_call(argv[2], argv[3]);
+            puts("Copying file");
+            char *src = (char *) malloc(sizeof(char) * 32);
+            char *dest = (char *) malloc(sizeof(char) * 32);
+            while ((opt = getopt(argc, argv, ":s:d:")) != -1) {
+                switch (opt) {
+                    case 's':
+                        strcpy(source, optarg);
+                        break;
+                    case 'd':
+                        strcpy(destination, optarg);
+                        break;
+                    case ':':
+                        printf("option needs a value\n");
+                        break;
+                    case '?':
+                        printf("unknown option: %c\n", optopt);
+                        break;
+                }
+            }
+            cp_call(src, dest);
             break;
         case rm:
-            puts("Making disc ...");
+            puts("Removing file ...");
             rm_call(argv[2]);
             break;
         case ls:
@@ -170,7 +246,7 @@ int main(int argc, char **argv) {
             ls_call(argv[2]);
             break;
         case rmdisc:
-            puts("Making disc ...");
+            puts("Removing disc ...");
             rmdisc_call(argv[2]);
             break;
         case info:

@@ -130,7 +130,7 @@ void create_file(const char *fname, int bytes) {
         puts("Not enough space ...");
         return;
     }
-//    if (find(fname) != NULL) remove_file(fname);
+    if (find(fname) != NULL) remove_file(fname);
 
     int descriptor_position = -1;
     descriptor **desc = load_descriptors_();

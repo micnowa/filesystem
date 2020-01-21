@@ -19,6 +19,8 @@ void rm_help();
 
 void ls_help();
 
-void rmdis_help();
+void rmdisc_help();
+
+void info_help();
 
 #endif //HELP_H
