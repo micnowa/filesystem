@@ -74,6 +74,12 @@ void remove_file(const char *name);
 
 void move_file(const char *source, const char *dest);
 
+void external_copy_file(const char *source, const char *dest);
+
+void copy_file(const char *source, const char *dest);
+
+void get_file(const char *source);
+
 descriptor *find(const char *file);
 
 descriptor *find_and_return_number(const char *file, int *num);

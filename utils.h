@@ -33,6 +33,10 @@ int load_disc_size();
 
 int load_file_counter();
 
+char* read_file_Bytes(const char *name);
+
+int fsize(FILE *fp);
+
 int load_block_number();
 
 int load_block_size();

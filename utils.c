@@ -14,6 +14,25 @@ FILE *open_disc(const char *mode) {
     } else return file;
 }
 
+char *read_file_Bytes(const char *name) {
+    FILE *fl = fopen(name, "r");
+    fseek(fl, 0, SEEK_END);
+    long len = ftell(fl);
+    char *ret = malloc(len);
+    fseek(fl, 0, SEEK_SET);
+    fread(ret, 1, len, fl);
+    fclose(fl);
+    return ret;
+}
+
+int fsize(FILE *fp){
+    int prev=ftell(fp);
+    fseek(fp, 0L, SEEK_END);
+    int sz=ftell(fp);
+    fseek(fp,prev,SEEK_SET); //go back to where we were
+    return sz;
+}
+
 
 bool is_positive_int(char *size) {
     if (!(size[0] >= '1' && size[0] <= '9')) return false;

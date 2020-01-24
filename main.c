@@ -17,6 +17,8 @@ enum string_code {
     rm,
     ls,
     rmdisc,
+    extcp,
+    get,
     info
 };
 
@@ -28,12 +30,15 @@ int cmd(char *inString) {
     if (!strcmp(inString, "rm")) return rm;
     if (!strcmp(inString, "ls")) return ls;
     if (!strcmp(inString, "rmdisc")) return rmdisc;
+    if (!strcmp(inString, "extcp")) return extcp;
+    if (!strcmp(inString, "get")) return get;
     if (!strcmp(inString, "info")) return info;
     return INT_MIN;
 }
 
 bool print_help(const char *option, const char *help) {
     bool used = false;
+    if(help == NULL) return false;
     if (strcmp(help, "--help") != 0) {
         return false;
     } else {
@@ -51,6 +56,14 @@ bool print_help(const char *option, const char *help) {
         }
         if (!strcmp(option, "cp")) {
             cp_help();
+            used = true;
+        }
+        if (!strcmp(option, "extcp")) {
+            extcp_help();
+            used = true;
+        }
+        if (!strcmp(option, "get")) {
+            get_help();
             used = true;
         }
         if (!strcmp(option, "rm")) {
@@ -108,30 +121,21 @@ void touch_call(char *string, char *str2) {
     create_file(extract_name(string), bytes);
 }
 
-/**
- * TODO Copy data form src to dest
- * TODO Purge file src
- * TODO Fragmentation is on rm and cp
- *
- * In fact it can be copy called, then rm on src!
- * It's important to save much effort
- *
- * @param src
- * @param dest
- */
-void mv_call(const char *src, const char *dest) {
 
+void mv_call(const char *src, const char *dest) {
+    move_file(src, dest);
 }
 
-/**
- * TODO Copy data from src to dest
- * TODO Fragmentation if needed
- *
- * @param src
- * @param dest
- */
 void cp_call(const char *src, const char *dest) {
+    copy_file(src, dest);
+}
 
+void extcp_call(const char *src, const char *dest) {
+    external_copy_file(src, dest);
+}
+
+void get_call(const char *src) {
+    get_file(src);
 }
 
 void rm_call(char *file) {
@@ -146,9 +150,10 @@ void rm_call(char *file) {
 
 void ls_call(char *option) {
     descriptor **desc = load_descriptors_();
+    puts("[name][date][first][size]");
     for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
         if (desc[i]->size != 0)
-            printf("%s %s %d %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
+            printf("%s, %s, %d, %d\n", desc[i]->name, desc[i]->date, desc[i]->first, desc[i]->size);
     }
 }
 
@@ -168,8 +173,8 @@ int main(int argc, char **argv) {
         case mkfs:
             puts("Making disc ...");
 
-            char *bytes = (char *) malloc(sizeof(char) * 20);
-            char *blocks = (char *) malloc(sizeof(char) * 20);
+            char *bytes = (char *) malloc(sizeof(char) * 32);
+            char *blocks = (char *) malloc(sizeof(char) * 32);
             while ((opt = getopt(argc, argv, ":s:b:")) != -1) {
                 switch (opt) {
                     case 's':
@@ -192,6 +197,10 @@ int main(int argc, char **argv) {
         case touch:
             puts("Creating file ...");
             touch_call(argv[2], argv[3]);
+            break;
+        case get:
+            puts("File is...");
+            get_call(argv[2]);
             break;
         case mv:
             puts("Moving file ...");
@@ -217,15 +226,17 @@ int main(int argc, char **argv) {
             break;
         case cp:
             puts("Copying file");
-            char *src = (char *) malloc(sizeof(char) * 32);
-            char *dest = (char *) malloc(sizeof(char) * 32);
+            char *source_file = (char *) malloc(sizeof(char) * 60);
+            char *destination_file = (char *) malloc(sizeof(char) * 60);
             while ((opt = getopt(argc, argv, ":s:d:")) != -1) {
                 switch (opt) {
                     case 's':
-                        strcpy(source, optarg);
+                        puts("");
+                        char * tmp = optarg;
+                        strcpy(source_file, optarg);
                         break;
                     case 'd':
-                        strcpy(destination, optarg);
+                        strcpy(destination_file, optarg);
                         break;
                     case ':':
                         printf("option needs a value\n");
@@ -235,7 +246,31 @@ int main(int argc, char **argv) {
                         break;
                 }
             }
-            cp_call(src, dest);
+            cp_call(source_file, destination_file);
+            break;
+        case extcp:
+            puts("Copying file");
+            char *src_ext = (char *) malloc(sizeof(char) * 60);
+            char *dest_ext = (char *) malloc(sizeof(char) * 60);
+            while ((opt = getopt(argc, argv, ":s:d:")) != -1) {
+                switch (opt) {
+                    case 's':
+                        puts("");
+                        char * tmp = optarg;
+                        strcpy(src_ext, optarg);
+                        break;
+                    case 'd':
+                        strcpy(dest_ext, optarg);
+                        break;
+                    case ':':
+                        printf("option needs a value\n");
+                        break;
+                    case '?':
+                        printf("unknown option: %c\n", optopt);
+                        break;
+                }
+            }
+            extcp_call(src_ext, dest_ext);
             break;
         case rm:
             puts("Removing file ...");

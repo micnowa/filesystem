@@ -296,7 +296,125 @@ void remove_file(const char *name) {
 
 }
 
-void move_file(const char *source, const char *dest) {}
+void move_file(const char *source, const char *dest) {
+    int src_pos;
+    descriptor *source_desc = find_and_return_number(source, &src_pos);
+    if (source_desc == NULL) return;
+    remove_file(source);
+    remove_file(dest);
+    create_file(dest, source_desc->size);
+}
+
+void external_copy_file(const char *source, const char *dest) {
+    int block_size = load_block_size();
+    int total_block_number = load_block_number();
+    char *tab = read_file_Bytes(source);
+    FILE *file_to_read = fopen(source, "r+");
+    int bytes = fsize(file_to_read);
+    fclose(file_to_read);
+
+    int block_number = !(bytes % block_size) ? bytes / block_size : bytes / block_size + 1;
+    int last_block_size = (bytes < block_size) ? bytes : bytes - block_number * block_size;
+    int counter = block_number;
+    /** Make file and put it into disc**/
+    remove_file(dest);
+    create_file(dest, bytes);
+    descriptor **desc = load_descriptors_();
+    descriptor *file_desc;
+    node **nd = load_nodes_();
+    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
+        if (!strcmp(desc[i]->name, dest)) {
+            file_desc = desc[i];
+            break;
+        }
+    }
+    int nodes_number[block_number];
+    nodes_number[0] = file_desc->first;
+    for (int i = 1; i < block_number; i++) {
+        nodes_number[i] = nd[nodes_number[i - 1]]->next;
+    }
+
+    FILE *file = open_disc("r+");
+    int block_off;
+    char *tmp;
+    int i = 0;
+    while (counter != 0) {
+        block_off = block_offset(nodes_number[counter - 1], total_block_number, block_size);
+        if (counter == 1) {
+            tmp = malloc(last_block_size);
+            memcpy(tmp, tab + i * block_size, last_block_size);
+            fseek(file, block_off, SEEK_SET);
+            fwrite(tmp, last_block_size, 1, file);
+        } else {
+            tmp = malloc(block_size);
+            memcpy(tmp, tab + i * block_size, block_size);
+            fseek(file, block_off, SEEK_SET);
+            fwrite(tmp, block_size, 1, file);
+        }
+        i++;
+        counter--;
+    }
+    fclose(file);
+}
+
+
+void copy_file(const char *source, const char *dest) {
+    int src_pos;
+    descriptor *source_desc = find_and_return_number(source, &src_pos);
+    if (source_desc == NULL) return;
+    strcpy(source_desc->name, dest);
+    strcpy(source_desc->date, current_date());
+    write_descriptor_(*source_desc, src_pos);
+}
+
+void get_file(const char *source) {
+    descriptor **desc = load_descriptors_();
+    descriptor *file_desc;
+    node **nd = load_nodes_();
+    int num;
+    for (int i = 0; i < FS_DESCRIPTOR_NUM; i++) {
+        if (!strcmp(desc[i]->name, source)) {
+            file_desc = desc[i];
+            break;
+        }
+    }
+    int bytes = file_desc->size;
+    int total_block_number = load_block_number();
+    int block_size = load_block_size();
+    int block_number = !(bytes % block_size) ? bytes / block_size : bytes / block_size + 1;
+    int last_block_size = (bytes < block_size) ? bytes : bytes - block_number * block_size;
+    char *inside = malloc(bytes);
+    int counter = block_number;
+
+    int nodes_number[block_number];
+    nodes_number[0] = file_desc->first;
+    for (int i = 1; i < block_number; i++) {
+        nodes_number[i] = nd[nodes_number[i - 1]]->next;
+    }
+
+    FILE *file = open_disc("r+");
+    int off;
+    char *tab = malloc(block_size);
+    int i = 0;
+    while (counter != 0) {
+        off = block_offset(nodes_number[counter - 1], total_block_number, block_size);
+        if (counter == 1) {
+            fseek(file, off, SEEK_SET);
+            fread(tab + block_size * i, last_block_size, 1, file);
+            memcpy(inside + block_size * i, tab, last_block_size);
+        } else {
+            fseek(file, off, SEEK_SET);
+            fread(tab + block_size * i, block_size, 1, file);
+            memcpy(inside + block_size * i, tab, block_size);
+        }
+        i++;
+        counter--;
+    }
+    fclose(file);
+
+    printf("\n%s\n", inside);
+}
+
 
 descriptor *find(const char *file) {
     descriptor **desc = load_descriptors_();

@@ -13,6 +13,10 @@ void touch_help();
 
 void mv_help();
 
+void get_help();
+
+void extcp_help();
+
 void cp_help();
 
 void rm_help();

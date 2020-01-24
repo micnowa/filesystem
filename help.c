@@ -27,6 +27,11 @@ void mv_help() {
     puts("-d - Name of destination file");
 }
 
+void get_help() {
+    puts("Prints file of given name into standard output");
+    puts("If the file does not exists it puts nothing");
+}
+
 void cp_help() {
     puts("Copies -s file to -d file, if file -d doesn't exist then it is created");
     puts("Content of file -s becomes content of file fy");
@@ -34,6 +39,15 @@ void cp_help() {
     puts("-s - Name of source file");
     puts("-d - Name of destination file");
 }
+
+void extcp_help() {
+    puts("Copies -s file from EXTERNAL SOURCE to -d file, if file -d doesn't exist then it is created");
+    puts("Content of file -s becomes content of file fy");
+    puts("Options:");
+    puts("-s - Name of source file");
+    puts("-d - Name of destination file");
+}
+
 
 void rm_help() {
     puts("Removes file -n from the disc");
